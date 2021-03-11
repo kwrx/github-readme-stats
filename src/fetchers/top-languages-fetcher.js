@@ -2,7 +2,7 @@ const { request, logger, clampValue } = require("../common/utils");
 const retryer = require("../common/retryer");
 require("dotenv").config();
 
-const fetcher = (variables, token) => {
+const fetcherUser = (variables, token) => {
   return request(
     {
       query: `
@@ -34,19 +34,56 @@ const fetcher = (variables, token) => {
   );
 };
 
+
+const fetcherOrg = (variables, token) => {
+  return request(
+    {
+      query: `
+      query userInfo($login: String!) {
+        organization(login: $login) {
+          # fetch only owner repos & not forks
+          repositories(isFork: false, first: 100) {
+            nodes {
+              name
+              languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
+                edges {
+                  size
+                  node {
+                    color
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      `,
+      variables,
+    },
+    {
+      Authorization: `bearer ${token}`,
+    },
+  );
+};
+
 async function fetchTopLanguages(username, langsCount = 5, exclude_repo = []) {
   if (!username) throw Error("Invalid username");
 
   langsCount = clampValue(parseInt(langsCount), 1, 10);
 
-  const res = await retryer(fetcher, { login: username });
+  let res = await retryer(fetcherUser, { login: username });
+
+  if(res.data.errors) { // FIXME: to improve...
+    res = await retryer(fetcherOrg, { login: username });
+  }
 
   if (res.data.errors) {
     logger.error(res.data.errors);
     throw Error(res.data.errors[0].message || "Could not fetch user");
   }
 
-  let repoNodes = res.data.data.user.repositories.nodes;
+  let repoNodes = (res.data.data.user || res.data.data.organization).repositories.nodes;
   let repoToHide = {};
 
   // populate repoToHide map for quick lookup

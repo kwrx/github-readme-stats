@@ -29,7 +29,6 @@ module.exports = async (req, res) => {
     custom_title,
     locale,
   } = req.query;
-  let topLangs;
 
   res.setHeader("Content-Type", "image/svg+xml");
 
@@ -42,11 +41,27 @@ module.exports = async (req, res) => {
   }
 
   try {
-    topLangs = await fetchTopLanguages(
-      username,
-      langs_count,
-      parseArray(exclude_repo),
-    );
+
+    let topLangs = [];
+
+    for(const currentUsername of username.split(',')) {
+      console.debug(currentUsername);
+      const currentTopLangs = await fetchTopLanguages(
+        currentUsername,
+        langs_count,
+        parseArray(exclude_repo),
+      );
+
+      for(const lang in currentTopLangs) {
+        if(lang in topLangs) {
+          topLangs[lang].size += currentTopLangs[lang].size;
+        } else {
+          topLangs[lang] = currentTopLangs[lang];
+        }
+      }
+
+    }
+
 
     const cacheSeconds = clampValue(
       parseInt(cache_seconds || CONSTANTS.TWO_HOURS, 10),
