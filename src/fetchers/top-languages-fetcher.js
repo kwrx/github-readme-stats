@@ -74,7 +74,7 @@ async function fetchTopLanguages(username, langsCount = 5, exclude_repo = []) {
 
   let res;
 
-  if(username.startsWith('#'))
+  if(username.startsWith('@'))
     res = await retryer(fetcherOrg, { login: username.substring(1) });
   else
     res = await retryer(fetcherUsr, { login: username });
