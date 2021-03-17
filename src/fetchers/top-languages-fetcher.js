@@ -2,7 +2,7 @@ const { request, logger, clampValue } = require("../common/utils");
 const retryer = require("../common/retryer");
 require("dotenv").config();
 
-const fetcherUser = (variables, token) => {
+const fetcherUsr = (variables, token) => {
   return request(
     {
       query: `
@@ -72,11 +72,12 @@ async function fetchTopLanguages(username, langsCount = 5, exclude_repo = []) {
 
   langsCount = clampValue(parseInt(langsCount), 1, 10);
 
-  let res = await retryer(fetcherUser, { login: username });
+  let res;
 
-  if(res.data.errors) { // FIXME: to improve...
+  if(username.startsWith('#'))
     res = await retryer(fetcherOrg, { login: username });
-  }
+  else
+    res = await retryer(fetcherUsr, { login: username });
 
   if (res.data.errors) {
     logger.error(res.data.errors);
